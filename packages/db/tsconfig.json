@@ -1,0 +1,39 @@
+{
+  "compilerOptions": {
+    // File Layout
+    "rootDir": "./src",
+    "outDir": "./dist",
+
+    // Environment Settings
+    "module": "nodenext",       // good for Node.js + ESM
+    "target": "esnext",
+    "lib": ["esnext"],
+    "types": ["node"],
+
+    // Required for TypeORM (decorators + metadata)
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+
+    // Other Outputs
+    "sourceMap": true,
+    "declaration": true,
+    "declarationMap": true,
+
+    // Stricter Typechecking Options
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+
+    // JSX (only needed if you’re mixing frontend here, usually not in backend/db)
+    "jsx": "react-jsx",
+
+    // Module settings
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "noUncheckedSideEffectImports": true,
+    "moduleDetection": "force",
+    "skipLibCheck": true
+  },
+  "include": ["src"],          // make sure only src/ is compiled
+  "exclude": ["node_modules", "dist"]
+}

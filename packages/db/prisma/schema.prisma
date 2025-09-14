@@ -1,0 +1,105 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id String @id @default(uuid())
+  email String @unique
+  password String
+  workflow Workflow[]
+  
+  apiKeys Credentials[]
+
+}
+
+model Workflow{
+  id String @id @default(uuid())
+  User User @relation(fields: [userId],references: [id])
+  userId String
+
+  title String
+  enabled Boolean @default(true)
+  nodes Json
+  connection Json
+
+  webhook Webhook? @relation(fields: [webhookId],references: [id])
+  webhookId String? @unique
+
+  triggerType TriggerType
+
+  execution Execution[]
+
+}
+
+model Webhook{
+  id String @id @default(uuid())
+  title String
+  method Methods @default(GET)
+  secret String?
+  workflow Workflow?
+
+}
+
+model Credentials{
+  id String @id @default(uuid())
+  title String 
+  platform Platform 
+  data Json
+
+  user User @relation(fields: [userId],references: [id], onDelete: Cascade)
+  userId String
+}
+
+model Execution{
+  id String @id @default(uuid())
+
+  workflow Workflow @relation(fields: [workflowId],references: [id])
+  workflowId String 
+
+  status ExecStatus @default(PENDING)
+  taskDone Int @default(0)
+  totalTasks Int?
+  output Json?
+  logs Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum Platform{
+  Telegram
+  ResendEmail
+  Gemini
+}
+
+enum Methods{
+  GET
+  POST
+  PUT
+  DELETE
+}
+
+
+enum TriggerType{
+  Webhook 
+  Manual
+  Cron
+}
+
+enum ExecStatus{
+  PENDING
+  SUCCESS
+  RUNNING
+  FAILED
+}
