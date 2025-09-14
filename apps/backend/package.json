@@ -1,8 +1,7 @@
 {
   "name": "backend",
   "version": "1.0.0",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "index.js",
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -12,12 +11,17 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "bcrypt": "^6.0.0",
     "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
     "pg": "^8.16.3",
+    "@n8n/db": "file:../../packages/db",
+    "@my-n8n/shared": "file:../../packages/shared",
     "zod": "^4.1.8"
   },
   "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
     "@types/express": "^5.0.3",
-     "@n8n/db": "workspace:*"
+    "@types/jsonwebtoken": "^9.0.10"
   }
 }
