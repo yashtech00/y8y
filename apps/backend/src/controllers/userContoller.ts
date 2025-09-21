@@ -1,7 +1,7 @@
 import { signupSchema } from "@my-n8n/shared";
-import prisma from "../service/db.js";
 import jwt from "jsonwebtoken"
 import bcrypt from "bcrypt"
+import prisma from "@n8n/db";
 
 const signUp = async (req:any, res:any) => {
     try {

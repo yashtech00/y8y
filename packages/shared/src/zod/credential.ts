@@ -1,4 +1,5 @@
 import z from "zod"
+import { Platform } from "@n8n/db";
 
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -6,7 +7,7 @@ const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export const ResendSchema = z.object({
     title: z.string().min(1, "Title is required"),
-    platform: z.literal("ResendEmail"),
+    platform: z.literal(Platform.ResendEmail),
     data: z.object({
         api_key: z.string().min(1, "API key is required"),
         resendDomainMail: z.string().regex(emailRegex, "Invalid email address").optional()
@@ -15,7 +16,7 @@ export const ResendSchema = z.object({
 
 export const TelegramSchema = z.object({
     title: z.string(),
-    platform: z.literal("Telegram"),
+    platform: z.literal(Platform.Telegram),
     data: z.object({
         botToken: z.string().min(1, "Bot token is required"),
         chatId: z.string().min(1, "Chat ID is required")
@@ -24,7 +25,7 @@ export const TelegramSchema = z.object({
 
 export const GeminiSchema = z.object({
     title: z.string(),
-    platform: z.literal("Gemini"),
+    platform: z.literal(Platform.Gemini),
     data: z.object({
         api_key: z.string().min(1, "API key is required"),
     })
