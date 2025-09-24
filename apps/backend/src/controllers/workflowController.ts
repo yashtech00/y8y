@@ -4,194 +4,184 @@ import type { Response } from "express";
 import { createWorkflowSchema, updateWorkflowSchema } from "@my-n8n/shared";
 import { enqueueExecution } from "../redis/enqueue.js";
 
-
 const createWorkflow = async (req: AuthRequest, res: Response): Promise<void> => {
-    try {
-        const validation = createWorkflowSchema.safeParse(req.body);
-        
-        if (!validation.success) {
-            res.status(400).json({
-                message: "Validation failed",
-                errors: validation.error.format(),
-            });
-            return;
-        }
+  try {
+    const validation = createWorkflowSchema.safeParse(req.body);
 
-        const newWorkflow = validation.data;
-
-        let webhookRecord = null;
-
-        if(newWorkflow.triggerType === "Webhook" && newWorkflow.webhook) {
-            webhookRecord = await prisma.webhook.create({
-                data: {
-                    title: newWorkflow.webhook.title,
-                    method: newWorkflow.webhook.method,
-                    secret: newWorkflow.webhook.secret,
-                }
-            })
-        }
-
-        const workflow = await prisma.workflow.create({
-            data: {
-                title: newWorkflow.title,
-                nodes: newWorkflow.nodes,
-                connections: newWorkflow.connections,
-                webhook: webhookRecord?.id,
-                triggerType: newWorkflow.triggerType,
-                enabled: newWorkflow.enabled,
-                userId: req.userId!,
-            },
-        })
-
-        res.status(200).json({
-            message: "Workflow created successfully",
-            workflow,
-        })
-
-    } catch (error:any) {
-        res.status(500).json({
-            message: "Internal server error",
-            error: error.message
-        });
-        return;
+    if (!validation.success) {
+      res.status(400).json({
+        message: "Validation failed",
+        errors: validation.error.format(),
+      });
+      return;
     }
+
+    const newWorkflow = validation.data;
+
+    let webhookRecord = null;
+    if (newWorkflow.triggerType === "Webhook" && newWorkflow.webhook) {
+      webhookRecord = await prisma.webhook.create({
+        data: {
+          title: newWorkflow.webhook.title || "",
+          method: newWorkflow.webhook.method || "",
+          secret: newWorkflow.webhook.secret || "",
+        },
+      });
+    }
+
+    const workflow = await prisma.workflow.create({
+      data: {
+        title: newWorkflow.title,
+        nodes: newWorkflow.nodes,
+        connections: newWorkflow.connections,
+        webhook: webhookRecord ? { connect: { id: webhookRecord.id } } : undefined,
+        triggerType: newWorkflow.triggerType,
+        enabled: newWorkflow.enabled,
+        user: { connect: { id: req.userId! } }, // relation connect
+      },
+    });
+
+    res.status(200).json({
+      message: "Workflow created successfully",
+      workflow,
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
 };
 
-const runManualWorkflow = async(req:AuthRequest,res:Response):Promise<void> => {
-    try {
-        const {id} = req.params;
-        const workflow = await prisma.workflow.findUnique({
-            where: {
-                id,
-            },
-        })
+const runManualWorkflow = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const workflow = await prisma.workflow.findUnique({
+      where: { id },
+    });
 
-        if (!workflow) {
-            res.status(404).json({
-                message: "Workflow not found",
-            })
-            return;
-        }
-        if (!workflow || workflow.userId !== req.userId) {
-            res.status(403).json({ message: "Not allowed to run this workflow" });
-            return;
-          }
-      
-          if (workflow.triggerType !== "Manual") {
-            res.status(400).json({ message: "This workflow is not manual" });
-            return;
-          }
-
-        const totalTasks = Object.keys(workflow.nodes).length;
-
-        const execution = await prisma.execution.create({
-            data: {
-                workflowId: id,
-                totalTasks,
-                output: {triggerPayload: {}},
-            },
-        })
-        await enqueueExecution(execution.id, id!, req.body ?? {});
-
-        res.status(200).json({
-            message: "Workflow executed successfully",
-            execution,
-        })
-        
-    } catch (error:any) {
-        res.status(500).json({
-            message: "Internal server error",
-            error: error.message
-        });
-        return;
+    if (!workflow) {
+      res.status(404).json({ message: "Workflow not found" });
+      return;
     }
-}
+
+    if (workflow.userId !== req.userId) {
+      res.status(403).json({ message: "Not allowed to run this workflow" });
+      return;
+    }
+
+    if (workflow.triggerType !== "Manual") {
+      res.status(400).json({ message: "This workflow is not manual" });
+      return;
+    }
+
+    const totalTasks = Object.keys((workflow.nodes as Record<string, any>) ?? {}).length;
+
+    const execution = await prisma.execution.create({
+      data: {
+        workflow: { connect: { id } }, // relation connect
+        totalTasks,
+        output: { triggerPayload: {} },
+      },
+    });
+
+    await enqueueExecution(execution.id, id, req.body ?? {});
+
+    res.status(200).json({
+      message: "Workflow executed successfully",
+      execution,
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
 
 const getAllWorkflows = async (req: AuthRequest, res: Response) => {
-    try {
-        const workflows = await prisma.workflow.findMany({
-            where: {
-                userId: req.userId!,
-            },
-        })
-        res.status(200).json({
-            message: "Workflows retrieved successfully",
-            workflows,
-        })
-    } catch (error:any) {
-        res.status(500).json({
-            message: "Internal server error",
-            error: error.message
-        })
-    }
-}
+  try {
+    const workflows = await prisma.workflow.findMany({
+      where: { userId: req.userId! },
+    });
+
+    res.status(200).json({
+      message: "Workflows retrieved successfully",
+      workflows,
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
 
 const getWorkflowById = async (req: AuthRequest, res: Response) => {
-    try {
-        const {id} = req.params;
-        const workflow = await prisma.workflow.findUnique({
-            where: {
-                id,
-            },
-        })
+  try {
+    const { id } = req.params;
+    const workflow = await prisma.workflow.findUnique({
+      where: { id },
+    });
 
-        if (!workflow) {
-            res.status(404).json({
-                message: "Workflow not found",
-            })
-            return;
-        }
-        
-        res.status(200).json({
-            message: "Workflow retrieved successfully",
-            workflow,
-        })
-    }catch(error:any){
-        res.status(500).json({
-            message: "Internal server error",
-            error: error.message
-        })
+    if (!workflow) {
+      res.status(404).json({ message: "Workflow not found" });
+      return;
     }
-}
+
+    res.status(200).json({
+      message: "Workflow retrieved successfully",
+      workflow,
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
 
 const updateWorkflow = async (req: AuthRequest, res: Response) => {
-    try {
-        const {id} = req.params;
-        const validation = updateWorkflowSchema.safeParse(req.body);
-        if(!validation.success){
-            res.status(400).json({
-                message: "Validation failed",
-                errors: validation.error.format(),
-            })
-            return;
-        }
+  try {
+    const { id } = req.params;
+    const validation = updateWorkflowSchema.safeParse(req.body);
 
-        const updatedWorkflow = await prisma.workflow.update({
-            where: {
-                id,
-            },
-            data: validation.data,
-        })
-
-        res.status(200).json({
-            message: "Workflow updated successfully",
-            updatedWorkflow,
-        })
-    } catch (error:any) {
-        res.status(500).json({
-            message: "Internal server error",
-            error: error.message
-        })
+    if (!validation.success) {
+      res.status(400).json({
+        message: "Validation failed",
+        errors: validation.error.format(),
+      });
+      return;
     }
-}
 
+    const data: any = {};
+    if (validation.data.title !== undefined) data.title = validation.data.title;
+    if (validation.data.nodes !== undefined) data.nodes = validation.data.nodes;
+    if (validation.data.connections !== undefined) data.connections = validation.data.connections;
+    if (validation.data.triggerType !== undefined) data.triggerType = validation.data.triggerType;
+    if (validation.data.enabled !== undefined) data.enabled = validation.data.enabled;
 
+    const updatedWorkflow = await prisma.workflow.update({
+      where: { id },
+      data,
+    });
+
+    res.status(200).json({
+      message: "Workflow updated successfully",
+      updatedWorkflow,
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
 
 export const workflowController = {
-    createWorkflow,
-    runManualWorkflow,
-    getAllWorkflows,
-    getWorkflowById,
-    updateWorkflow,
-   
-}
+  createWorkflow,
+  runManualWorkflow,
+  getAllWorkflows,
+  getWorkflowById,
+  updateWorkflow,
+};

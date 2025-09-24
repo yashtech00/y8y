@@ -17,7 +17,7 @@ export default function AppRoutes() {
             {/* Protected Routes with Workflow Layout */}
             <Route element={<WorkflowLayout />}>
                 <Route path="/workflows" element={<WorkFlowDashboard />} />
-                <Route path="/workflow" element={<WorkFlow />} />
+                <Route path="/workflow/create" element={<WorkFlow />} />
                 
                 {/* Add more workflow-related routes here */}
                 <Route path="/dashboard" element={<Navigate to="/workflows" replace />} />

@@ -13,7 +13,7 @@ const signUp = async (req:any, res:any) => {
             })
         }
 
-        const existingUser = await prisma.User.findUnique({
+        const existingUser = await prisma.user.findUnique({
             where: {
                 email: data.email
             }
@@ -27,7 +27,7 @@ const signUp = async (req:any, res:any) => {
 
         const hashedPassword = await bcrypt.hash(data.password, 10);
 
-        const user = await prisma.User.create({
+        const user = await prisma.user.create({
             data: {
                 email: data.email,
                 password: hashedPassword
@@ -44,6 +44,8 @@ const signUp = async (req:any, res:any) => {
             user
         })
     } catch (e) {
+        console.log(e, "Signup error");
+        
         return res.status(500).json({
             message:"Internal server error"
         })
@@ -60,7 +62,7 @@ const signIn = async (req: any, res: any) => {
             })
         }
 
-        const user = await prisma.User.findUnique({
+        const user = await prisma.user.findUnique({
             where: {
                 email: data.email
             }

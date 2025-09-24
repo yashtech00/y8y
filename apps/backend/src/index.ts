@@ -26,7 +26,9 @@ app.use(
       ],
       exposedHeaders: ["Authorization"],
     })
-  );
+);
+  
+app.use(express.json());
 
 app.get("/", (req,res) => {
     res.send("backend N8N")
