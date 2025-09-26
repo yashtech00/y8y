@@ -1,5 +1,7 @@
 import { useState, useCallback } from "react";
 import {
+  Background,
+  Controls,
   ReactFlow,
   addEdge,
   applyEdgeChanges,
@@ -67,14 +69,14 @@ export default function WorkFlow() {
   };
 
   return (
-    <div className="w-screen h-screen flex flex-col bg-gray-900 text-white">
+    <div className="max-w-screen h-screen flex flex-col bg-gray-900  ">
       {/* Top Bar */}
       <div className="flex justify-between items-center p-4 bg-gray-800">
-        <h1 className="text-lg font-semibold">Workflow Editor</h1>
+        <h1 className="text-lg font-semibold text-white">Workflow Editor</h1>
         <button
           onClick={saveWorkflow}
           disabled={saving}
-          className={`px-4 py-2 rounded-md ${
+          className={`px-4 py-2 rounded-md text-white ${
             saving
               ? "bg-gray-500 cursor-not-allowed"
               : "bg-red-500 hover:bg-red-600"
@@ -93,8 +95,13 @@ export default function WorkFlow() {
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
           fitView
-        />
+        >
+         <Background />
+        <Controls />
+         </ReactFlow>
       </div>
+     
+     
     </div>
   );
 }
