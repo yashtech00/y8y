@@ -5,6 +5,7 @@ import workflowRoutes from "./routes/workflow.js"
 import webhookRoutes from "./routes/webhook.js"
 import dotenv from "dotenv"
 import cors from "cors"
+import formRoutes from "./routes/form.js"
 
 dotenv.config();
 
@@ -37,7 +38,8 @@ app.get("/", (req,res) => {
 app.use("/api/v1/users", userRoutes);
 app.use("/api/v1/credentials", credentialRoutes);
 app.use("/api/v1/workflow", workflowRoutes);
-app.use("/api/v1/webhook", webhookRoutes)    ;
+app.use("/api/v1/webhook", webhookRoutes);
+app.use("/api/v1/form", formRoutes);
 
 app.listen(PORT, () => {
     console.log(`server is connected to ${PORT}`);
