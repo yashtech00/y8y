@@ -139,9 +139,9 @@ const CredentialsModal = ({ isOpen, onClose, selectedTrigger, onSave }: Credenti
   if (!currentConfig) {
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg p-6 w-96">
-          <p>Unsupported trigger type: {selectedTrigger}</p>
-          <button onClick={onClose} className="mt-4 px-4 py-2 bg-gray-500 text-white rounded">
+        <div className="bg-card border border-border rounded-lg shadow-card p-6 w-96">
+          <p className="text-foreground">Unsupported trigger type: {selectedTrigger}</p>
+          <button onClick={onClose} className="mt-4 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-md transition-smooth">
             Close
           </button>
         </div>
@@ -151,83 +151,83 @@ const CredentialsModal = ({ isOpen, onClose, selectedTrigger, onSave }: Credenti
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-hidden">
+      <div className="bg-card border border-border rounded-lg shadow-card w-full max-w-md max-h-[90vh] overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b">
+        <div className="flex items-center justify-between p-6 border-b border-border">
           <div className="flex items-center gap-3">
             {currentConfig.icon}
-            <h2 className="text-xl font-semibold text-gray-900">
+            <h2 className="text-xl font-semibold text-foreground">
               Setup {selectedTrigger}
             </h2>
           </div>
           <button
             onClick={resetAndClose}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            className="p-2 hover:bg-muted rounded-full transition-smooth"
             title="Close modal"
           >
-            <X className="w-5 h-5" />
+            <X className="w-5 h-5 text-muted-foreground" />
           </button>
         </div>
 
         {/* Form */}
         <div className="p-6 space-y-4 max-h-[calc(90vh-140px)] overflow-y-auto">
-          <p className="text-gray-600 text-sm mb-4">
+          <p className="text-muted-foreground text-sm mb-4">
             Please provide your {selectedTrigger} credentials to continue with the workflow setup.
           </p>
 
           {currentConfig.fields.map((field: any) => (
             <div key={field.name}>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-foreground mb-1">
                 {field.label}
-                {field.required && <span className="text-red-500 ml-1">*</span>}
+                {field.required && <span className="text-destructive ml-1">*</span>}
               </label>
               <input
                 type={field.type}
                 value={formData[field.name as keyof typeof formData]}
                 onChange={(e) => handleInputChange(field.name, e.target.value)}
                 placeholder={field.placeholder}
-                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                  errors[field.name] ? 'border-red-500' : 'border-gray-300'
+                className={`w-full px-3 py-2 border rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring transition-smooth ${
+                  errors[field.name] ? 'border-destructive' : 'border-border'
                 }`}
               />
               {errors[field.name] && (
-                <p className="text-red-500 text-xs mt-1">{errors[field.name]}</p>
+                <p className="text-destructive text-xs mt-1">{errors[field.name]}</p>
               )}
             </div>
           ))}
 
           {/* Helper text for different platforms */}
-          <div className="bg-blue-50 p-3 rounded-md">
-            <p className="text-sm text-blue-800">
+          <div className="bg-muted/50 border border-border p-3 rounded-md">
+            <p className="text-sm text-muted-foreground">
               {selectedTrigger === 'Resend Email' && (
-                <>Need help? Get your API key from your <a href="https://resend.com/api-keys" target="_blank" rel="noopener noreferrer" className="underline">Resend dashboard</a></>
+                <>Need help? Get your API key from your <a href="https://resend.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary/80 underline transition-smooth">Resend dashboard</a></>
               )}
               {selectedTrigger === 'Telegram' && (
-                <>Create a bot with <a href="https://t.me/botfather" target="_blank" rel="noopener noreferrer" className="underline">@BotFather</a> to get your bot token and chat ID</>
+                <>Create a bot with <a href="https://t.me/botfather" target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary/80 underline transition-smooth">@BotFather</a> to get your bot token and chat ID</>
               )}
               {selectedTrigger === 'Gemini' && (
-                <>Get your API key from <a href="https://makersuite.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="underline">Google AI Studio</a></>
+                <>Get your API key from <a href="https://makersuite.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary/80 underline transition-smooth">Google AI Studio</a></>
               )}
             </p>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end gap-3 p-6 border-t bg-gray-50">
+        <div className="flex justify-end gap-3 p-6 border-t border-border bg-muted/30">
           <button
             type="button"
             onClick={resetAndClose}
-            className="px-4 py-2 text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+            className="px-4 py-2 text-muted-foreground border border-border rounded-md hover:bg-muted transition-smooth"
           >
             Cancel
           </button>
           <button
             onClick={handleSubmit}
             disabled={loading}
-            className={`px-6 py-2 rounded-md text-white font-medium transition-colors ${
+            className={`px-6 py-2 rounded-md text-primary-foreground font-medium transition-smooth ${
               loading
-                ? 'bg-gray-400 cursor-not-allowed'
-                : 'bg-blue-600 hover:bg-blue-700'
+                ? 'bg-muted cursor-not-allowed text-muted-foreground'
+                : 'bg-primary hover:bg-primary/90 shadow-primary'
             }`}
           >
             {loading ? 'Saving...' : 'Save Credentials'}
