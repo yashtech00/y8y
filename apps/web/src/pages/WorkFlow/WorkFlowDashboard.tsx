@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { fetchWorkflows, updateWorkflow } from "../../utils/Api";
-import { useNavigate } from "react-router";
+import { fetchWorkflows, updateWorkflow } from "../../utils/api";
+import { Link} from "react-router";
 
 interface Workflow {
   id: string;
@@ -17,7 +17,7 @@ export default function WorkFlowDashboard() {
   const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     
-    const navigate=useNavigate();
+    
 
   const token = localStorage.getItem("token") || ""; // adjust auth handling
 
@@ -58,13 +58,14 @@ export default function WorkFlowDashboard() {
   return (
     <div className="min-h-screen bg-gray-900 text-white p-6">
     <div className="flex justify-between items-center mb-6">
-      <h1 className="text-2xl font-bold">Overview</h1>
-      <button
-        onClick={() => navigate("/workflow/create")}
+        <h1 className="text-2xl font-bold">Overview</h1>
+        <Link to="/workflow/editor">
+          <button
         className="bg-red-500 hover:bg-red-600 px-4 py-2 rounded-md text-white"
       >
         Create Workflow
-      </button>
+          </button>
+        </Link>
       </div>
 
       {/* Tabs */}

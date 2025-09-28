@@ -3,7 +3,7 @@ import Home from "../pages/Home";
 import SignIn from "../pages/Auth/SignIn";
 import SignUp from "../pages/Auth/SignUp";
 import WorkFlowDashboard from "../pages/WorkFlow/WorkFlowDashboard";
-import WorkFlow from "../pages/WorkFlow/WorkFlow";
+import WorkFlow from "../pages/WorkFlow/WorkFlowEditor";
 import WorkflowLayout from "../pages/WorkFlow/workflowLayout";
 
 export default function AppRoutes() {
@@ -17,7 +17,7 @@ export default function AppRoutes() {
             {/* Protected Routes with Workflow Layout */}
             <Route element={<WorkflowLayout />}>
                 <Route path="/workflows" element={<WorkFlowDashboard />} />
-                <Route path="/workflow/create" element={<WorkFlow />} />
+                <Route path="/workflow/editor" element={<WorkFlow />} />
                 
                 {/* Add more workflow-related routes here */}
                 <Route path="/dashboard" element={<Navigate to="/workflows" replace />} />
