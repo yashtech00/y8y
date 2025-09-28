@@ -8,15 +8,15 @@ import {
   applyNodeChanges,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
+import { createWorkflow } from "../../utils/Api";
 
 const initialNodes: any[] = [];
 const initialEdges: any[] = [];
 
-export default function WorkFlow() {
+export default function WorkFlowEditor() {
   const [nodes, setNodes] = useState(initialNodes);
   const [edges, setEdges] = useState(initialEdges);
   const [saving, setSaving] = useState(false);
-  const [triggerType, setTriggerType] = useState("Manual");
   const [title, setTitle] = useState("");
   const [openTriggerDrawer, setOpenTriggerDrawer] = useState(false);
 
@@ -50,23 +50,16 @@ export default function WorkFlow() {
   const saveWorkflow = async () => {
     setSaving(true);
     try {
-      const res = await fetch("http://localhost:8080/api/v1/workflow/create", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
+      const data = await createWorkflow(
+        {
           title: title || "My workflow",
           nodes,
           connections: edges,
           triggerType: "Manual",
           enabled: true,
-        }),
-      });
-
-      if (!res.ok) throw new Error("Failed to save workflow");
-      const data = await res.json();
+        },
+        token
+      );
       alert("✅ Workflow saved successfully!");
       console.log("Saved workflow:", data);
     } catch (err: any) {
@@ -77,17 +70,17 @@ export default function WorkFlow() {
   };
 
   return (
-    <div className="max-w-screen h-screen flex flex-col bg-gray-900">
+    <div className="max-w-screen h-screen flex flex-col bg-background">
       {/* Top Bar */}
-      <div className="flex justify-between items-center p-4 bg-gray-800">
-        <h1 className="text-lg font-semibold text-white">Workflow Editor</h1>
+      <div className="flex justify-between items-center p-4 bg-card border-b border-border">
+        <h1 className="text-lg font-semibold text-foreground">Workflow Editor</h1>
         <button
           onClick={saveWorkflow}
           disabled={saving}
-          className={`px-4 py-2 rounded-md text-white ${
+          className={`px-4 py-2 rounded-md text-primary-foreground transition-colors ${
             saving
-              ? "bg-gray-500 cursor-not-allowed"
-              : "bg-red-500 hover:bg-red-600"
+              ? "bg-muted cursor-not-allowed"
+              : "bg-primary hover:bg-primary/90"
           }`}
         >
           {saving ? "Saving..." : "Save Workflow"}
@@ -95,16 +88,16 @@ export default function WorkFlow() {
       </div>
 
       {/* Title Input */}
-      <div className="flex justify-center items-center bg-gray-800 p-4">
-          {title.length > 0 && (
-            <h1 className="text-lg font-semibold text-white">{title}</h1>
-          )}
+      <div className="flex justify-center items-center bg-card border-b border-border p-4 gap-4">
+        {title.length > 0 && (
+          <h1 className="text-lg font-semibold text-foreground">{title}</h1>
+        )}
         <input
           type="text"
           placeholder="Workflow Title"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          className="px-4 py-2 rounded-md border border-gray-600 text-white"
+          className="px-4 py-2 rounded-md border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors w-64"
         />
       </div>
 
@@ -127,7 +120,7 @@ export default function WorkFlow() {
           <div className="absolute inset-0 flex items-center justify-center">
             <button
               onClick={() => setOpenTriggerDrawer(true)}
-              className="px-4 py-2 bg-gray-700 text-white rounded-lg border border-dashed border-gray-400 hover:bg-gray-600"
+              className="px-4 py-2 bg-card border border-border text-foreground rounded-lg hover:bg-card/80 transition-colors"
             >
               + Add first step...
             </button>
@@ -139,7 +132,7 @@ export default function WorkFlow() {
           <div className="absolute bottom-6 right-6">
             <button
               onClick={() => setOpenTriggerDrawer(true)}
-              className="w-12 h-12 flex items-center justify-center rounded-full bg-blue-600 text-white text-2xl shadow-lg hover:bg-blue-700"
+              className="w-12 h-12 flex items-center justify-center rounded-full bg-primary text-primary-foreground text-2xl shadow-primary hover:bg-primary/90 transition-colors"
             >
               +
             </button>
@@ -148,8 +141,8 @@ export default function WorkFlow() {
 
         {/* Trigger Drawer */}
         {openTriggerDrawer && (
-          <div className="absolute top-0 right-0 w-64 h-full bg-white shadow-xl z-50 p-4 animate-slide-in">
-            <h2 className="text-lg font-semibold mb-4">Choose Trigger</h2>
+          <div className="absolute top-0 right-0 w-64 h-full bg-card border-l border-border shadow-card z-50 p-4 animate-slide-in">
+            <h2 className="text-lg font-semibold mb-4 text-foreground">Choose Trigger</h2>
             <ul className="space-y-2">
               {["Gmail", "Webhook", "Telegram", "Resend Email"].map((item) => (
                 <li key={item}>
@@ -158,7 +151,7 @@ export default function WorkFlow() {
                       addNode(item);
                       setOpenTriggerDrawer(false);
                     }}
-                    className="w-full text-left px-3 py-2 rounded hover:bg-gray-200"
+                    className="w-full text-left px-3 py-2 rounded hover:bg-muted transition-colors text-foreground"
                   >
                     {item}
                   </button>
@@ -167,7 +160,7 @@ export default function WorkFlow() {
             </ul>
             <button
               onClick={() => setOpenTriggerDrawer(false)}
-              className="mt-4 text-sm text-gray-600 underline"
+              className="mt-4 text-sm text-muted-foreground hover:text-primary transition-colors"
             >
               Close
             </button>
