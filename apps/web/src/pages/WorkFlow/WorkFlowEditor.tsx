@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   Background,
   Controls,
@@ -8,7 +8,8 @@ import {
   applyNodeChanges,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { createWorkflow } from "../../utils/Api";
+import { createWorkflow, fetchCredentials } from "../../utils/Api";
+import CredentialsModal from "./CredentialModel";
 
 const initialNodes: any[] = [];
 const initialEdges: any[] = [];
@@ -19,8 +20,24 @@ export default function WorkFlowEditor() {
   const [saving, setSaving] = useState(false);
   const [title, setTitle] = useState("");
   const [openTriggerDrawer, setOpenTriggerDrawer] = useState(false);
+  const [showCredModal, setShowCredModal] = useState(false);
+  const [selectedTrigger, setSelectedTrigger] = useState("");
+  const [, setCredentials] = useState([]);
 
   const token = localStorage.getItem("token") || "";
+
+  // Load credentials on component mount
+  useEffect(() => {
+    const loadCredentials = async () => {
+      try {
+        const data = await fetchCredentials(token);
+        setCredentials(data.credentials || []);
+      } catch (err) {
+        console.error("Failed to load credentials:", err);
+      }
+    };
+    loadCredentials();
+  }, [token]);
 
   const onNodesChange = useCallback(
     (changes: any) => setNodes((nds) => applyNodeChanges(changes, nds)),
@@ -35,16 +52,48 @@ export default function WorkFlowEditor() {
     []
   );
 
-  const addNode = (label?: string) => {
+  const addNode = (label?: string, credentialId?: string) => {
     const id = `n${nodes.length + 1}`;
     setNodes((nds) => [
       ...nds,
       {
         id,
         position: { x: Math.random() * 400, y: Math.random() * 400 },
-        data: { label: label || `Node ${nodes.length + 1}` },
+        data: { 
+          label: label || `Node ${nodes.length + 1}`,
+          credentialId: credentialId || null
+        },
       },
     ]);
+  };
+
+  const handleTriggerSelect = (trigger: string) => {
+    // Check if credentials are required for this trigger
+    const requiresCredentials = ['Resend Email', 'Telegram', 'Gemini'].includes(trigger);
+    
+    if (requiresCredentials) {
+      setSelectedTrigger(trigger);
+      setShowCredModal(true);
+    } else {
+      addNode(trigger);
+      setOpenTriggerDrawer(false);
+    }
+  };
+
+  const handleCredentialSave = async (credentialData: any) => {
+    try {
+      // Add the node with the credential
+      addNode(selectedTrigger, credentialData.id);
+      setOpenTriggerDrawer(false);
+      setShowCredModal(false);
+      setSelectedTrigger("");
+      
+      // Refresh credentials list
+      const data = await fetchCredentials(token);
+      setCredentials(data.credentials || []);
+    } catch (err) {
+      console.error("Failed to save credential:", err);
+    }
   };
 
   const saveWorkflow = async () => {
@@ -144,13 +193,10 @@ export default function WorkFlowEditor() {
           <div className="absolute top-0 right-0 w-64 h-full bg-card border-l border-border shadow-card z-50 p-4 animate-slide-in">
             <h2 className="text-lg font-semibold mb-4 text-foreground">Choose Trigger</h2>
             <ul className="space-y-2">
-              {["Gmail", "Webhook", "Telegram", "Resend Email"].map((item) => (
+              {["Gmail", "Webhook", "Telegram", "Resend Email", "Gemini"].map((item) => (
                 <li key={item}>
                   <button
-                    onClick={() => {
-                      addNode(item);
-                      setOpenTriggerDrawer(false);
-                    }}
+                    onClick={() => handleTriggerSelect(item)}
                     className="w-full text-left px-3 py-2 rounded hover:bg-muted transition-colors text-foreground"
                   >
                     {item}
@@ -168,8 +214,19 @@ export default function WorkFlowEditor() {
         )}
       </div>
 
+      {/* Credentials Modal */}
+      <CredentialsModal
+        isOpen={showCredModal}
+        onClose={() => {
+          setShowCredModal(false);
+          setSelectedTrigger("");
+        }}
+        selectedTrigger={selectedTrigger}
+        onSave={handleCredentialSave}
+      />
+
       {/* Animations */}
-      <style jsx>{`
+      <style>{`
         .animate-slide-in {
           animation: slide-in 0.3s ease-out forwards;
         }

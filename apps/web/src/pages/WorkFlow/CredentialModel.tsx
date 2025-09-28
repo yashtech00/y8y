@@ -1,7 +1,14 @@
 import { useState } from 'react';
 import { X, Mail, MessageCircle, Sparkles } from 'lucide-react';
 
-const CredentialsModal = ({ isOpen, onClose, selectedTrigger, onSave }) => {
+interface CredentialsModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  selectedTrigger: string;
+  onSave: (credentialData: any) => Promise<void>;
+}
+
+const CredentialsModal = ({ isOpen, onClose, selectedTrigger, onSave }: CredentialsModalProps) => {
   const [formData, setFormData] = useState({
     title: '',
     api_key: '',
@@ -9,7 +16,7 @@ const CredentialsModal = ({ isOpen, onClose, selectedTrigger, onSave }) => {
     botToken: '',
     chatId: ''
   });
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
 
   if (!isOpen) return null;
@@ -45,15 +52,15 @@ const CredentialsModal = ({ isOpen, onClose, selectedTrigger, onSave }) => {
     }
   };
 
-  const currentConfig = platformConfigs[selectedTrigger];
+  const currentConfig = platformConfigs[selectedTrigger as keyof typeof platformConfigs];
 
   const validateForm = () => {
-    const newErrors = {};
+    const newErrors: Record<string, string> = {};
     
     if (!currentConfig) return false;
 
-    currentConfig.fields.forEach(field => {
-      const value = formData[field.name];
+    currentConfig.fields.forEach((field: any) => {
+      const value = formData[field.name as keyof typeof formData];
       
       if (field.required && (!value || value.trim() === '')) {
         newErrors[field.name] = `${field.label} is required`;
@@ -68,14 +75,14 @@ const CredentialsModal = ({ isOpen, onClose, selectedTrigger, onSave }) => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleInputChange = (name, value) => {
+  const handleInputChange = (name: string, value: string) => {
     setFormData(prev => ({ ...prev, [name]: value }));
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
     }
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!validateForm()) return;
@@ -87,13 +94,13 @@ const CredentialsModal = ({ isOpen, onClose, selectedTrigger, onSave }) => {
       const credentialData = {
         title: formData.title,
         platform: currentConfig.platform,
-        data: {}
+        data: {} as Record<string, string>
       };
 
       // Map form data to schema structure
-      currentConfig.fields.forEach(field => {
-        if (field.name !== 'title' && formData[field.name]) {
-          credentialData.data[field.name] = formData[field.name];
+      currentConfig.fields.forEach((field: any) => {
+        if (field.name !== 'title' && formData[field.name as keyof typeof formData]) {
+          credentialData.data[field.name] = formData[field.name as keyof typeof formData];
         }
       });
 
@@ -156,6 +163,7 @@ const CredentialsModal = ({ isOpen, onClose, selectedTrigger, onSave }) => {
           <button
             onClick={resetAndClose}
             className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            title="Close modal"
           >
             <X className="w-5 h-5" />
           </button>
@@ -167,7 +175,7 @@ const CredentialsModal = ({ isOpen, onClose, selectedTrigger, onSave }) => {
             Please provide your {selectedTrigger} credentials to continue with the workflow setup.
           </p>
 
-          {currentConfig.fields.map((field) => (
+          {currentConfig.fields.map((field: any) => (
             <div key={field.name}>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 {field.label}
@@ -175,7 +183,7 @@ const CredentialsModal = ({ isOpen, onClose, selectedTrigger, onSave }) => {
               </label>
               <input
                 type={field.type}
-                value={formData[field.name]}
+                value={formData[field.name as keyof typeof formData]}
                 onChange={(e) => handleInputChange(field.name, e.target.value)}
                 placeholder={field.placeholder}
                 className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
@@ -230,81 +238,4 @@ const CredentialsModal = ({ isOpen, onClose, selectedTrigger, onSave }) => {
   );
 };
 
-// Demo component to show how to use the modal
-export default function CredentialsDemo() {
-  const [modalOpen, setModalOpen] = useState(false);
-  const [selectedTrigger, setSelectedTrigger] = useState('');
-  const [savedCredentials, setSavedCredentials] = useState([]);
-
-  const triggers = ['Resend Email', 'Telegram', 'Gemini'];
-
-  const handleTriggerClick = (trigger) => {
-    setSelectedTrigger(trigger);
-    setModalOpen(true);
-  };
-
-  const handleSaveCredentials = async (credentialData) => {
-    // Here you would normally make an API call to save credentials
-    console.log('Saving credentials:', credentialData);
-    
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Add to saved credentials for demo
-    setSavedCredentials(prev => [...prev, credentialData]);
-    
-    alert('✅ Credentials saved successfully!');
-  };
-
-  return (
-    <div className="min-h-screen bg-gray-100 p-8">
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">Workflow Triggers</h1>
-        
-        <div className="bg-white rounded-lg shadow p-6 mb-8">
-          <h2 className="text-xl font-semibold mb-4">Available Triggers</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {triggers.map((trigger) => (
-              <button
-                key={trigger}
-                onClick={() => handleTriggerClick(trigger)}
-                className="p-4 border border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-left"
-              >
-                <div className="flex items-center gap-3">
-                  {trigger === 'Resend Email' && <Mail className="w-6 h-6 text-blue-500" />}
-                  {trigger === 'Telegram' && <MessageCircle className="w-6 h-6 text-blue-500" />}
-                  {trigger === 'Gemini' && <Sparkles className="w-6 h-6 text-blue-500" />}
-                  <span className="font-medium">{trigger}</span>
-                </div>
-                <p className="text-sm text-gray-600 mt-2">
-                  Click to setup credentials
-                </p>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {savedCredentials.length > 0 && (
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-xl font-semibold mb-4">Saved Credentials</h2>
-            <div className="space-y-2">
-              {savedCredentials.map((cred, index) => (
-                <div key={index} className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                  <div className="font-medium text-green-800">{cred.title}</div>
-                  <div className="text-sm text-green-600">Platform: {cred.platform}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <CredentialsModal
-          isOpen={modalOpen}
-          onClose={() => setModalOpen(false)}
-          selectedTrigger={selectedTrigger}
-          onSave={handleSaveCredentials}
-        />
-      </div>
-    </div>
-  );
-}
+export default CredentialsModal;

@@ -4,8 +4,9 @@ import {
   updateWorkflow,
   fetchCredentials,
   createCredential,
-} from "../../utils/Api";
+} from "../../utils/api";
 import { Link } from "react-router-dom";
+import CredentialsModal from "./CredentialModel";
 
 interface Workflow {
   id: string;
@@ -35,9 +36,9 @@ export default function WorkFlowDashboard() {
   const [credentials, setCredentials] = useState<Credential[]>([]);
   const [credLoading, setCredLoading] = useState(false);
   const [credError, setCredError] = useState("");
-  const [showCredForm, setShowCredForm] = useState(false);
-  const [credName, setCredName] = useState("");
-  const [credType, setCredType] = useState("API Key");
+  const [showCredTypeModal, setShowCredTypeModal] = useState(false);
+  const [showCredModal, setShowCredModal] = useState(false);
+  const [selectedCredType, setSelectedCredType] = useState("");
 
   const token = localStorage.getItem("token") || "";
 
@@ -84,19 +85,33 @@ export default function WorkFlowDashboard() {
     }
   };
 
-  const handleCreateCredential = async () => {
+  const handleCreateCredential = async (credentialData: any) => {
     try {
-      await createCredential({ name: credName, type: credType }, token);
+      await createCredential(credentialData, token);
       setCredentials((prev) => [
         ...prev,
-        { id: Date.now().toString(), name: credName, type: credType, createdAt: new Date().toISOString() },
+        { 
+          id: Date.now().toString(), 
+          name: credentialData.title, 
+          type: credentialData.platform, 
+          createdAt: new Date().toISOString() 
+        },
       ]);
-      setShowCredForm(false);
-      setCredName("");
-      setCredType("API Key");
+      setShowCredModal(false);
+      setSelectedCredType("");
     } catch (err: any) {
       alert("❌ Failed to create credential: " + err.message);
     }
+  };
+
+  const handleCreateCredentialClick = () => {
+    setShowCredTypeModal(true);
+  };
+
+  const handleCredTypeSelect = (credType: string) => {
+    setSelectedCredType(credType);
+    setShowCredTypeModal(false);
+    setShowCredModal(true);
   };
 
   return (
@@ -113,10 +128,10 @@ export default function WorkFlowDashboard() {
         )}
         {activeTab === "Credentials" && (
           <button
-            onClick={() => setShowCredForm(true)}
+            onClick={handleCreateCredentialClick}
             className="bg-primary hover:bg-primary/90 px-4 py-2 rounded-md text-primary-foreground transition-colors"
           >
-            Add Credential
+            Create Credential
           </button>
         )}
       </div>
@@ -215,44 +230,88 @@ export default function WorkFlowDashboard() {
         </>
       )}
 
-      {/* Modal for adding credential */}
-      {showCredForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-card border border-border rounded-lg p-6 w-96">
-            <h2 className="text-lg font-bold mb-4 text-foreground">Add Credential</h2>
-            <input
-              type="text"
-              placeholder="Credential Name"
-              value={credName}
-              onChange={(e) => setCredName(e.target.value)}
-              className="w-full mb-3 px-3 py-2 rounded bg-background border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
-            />
-            <select
-              value={credType}
-              onChange={(e) => setCredType(e.target.value)}
-              className="w-full mb-3 px-3 py-2 rounded bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
-            >
-              <option>API Key</option>
-              <option>OAuth2</option>
-              <option>Database</option>
-            </select>
-            <div className="flex justify-end space-x-3">
+      {/* Credential Type Selection Modal */}
+      {showCredTypeModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-card border border-border rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b">
+              <h2 className="text-xl font-semibold text-foreground">
+                Add new credential
+              </h2>
               <button
-                onClick={() => setShowCredForm(false)}
-                className="px-3 py-2 rounded bg-muted text-muted-foreground hover:bg-muted/80 transition-colors"
+                onClick={() => setShowCredTypeModal(false)}
+                className="p-2 hover:bg-muted rounded-full transition-colors"
+                title="Close modal"
               >
-                Cancel
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
               </button>
-              <button
-                onClick={handleCreateCredential}
-                className="px-3 py-2 rounded bg-primary hover:bg-primary/90 text-primary-foreground transition-colors"
-              >
-                Save
-              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-6">
+              <p className="text-muted-foreground text-sm mb-4">
+                Select an app or service to connect to
+              </p>
+              
+              {/* Search */}
+              <div className="relative mb-4">
+                <input
+                  type="text"
+                  placeholder="Search for app..."
+                  className="w-full px-3 py-2 pl-10 pr-4 rounded-md border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
+                />
+                <svg className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+
+              {/* Service List */}
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {["Resend Email", "Telegram", "Gemini"].map((service) => (
+                  <button
+                    key={service}
+                    onClick={() => handleCredTypeSelect(service)}
+                    className="w-full text-left px-3 py-2 rounded-md hover:bg-muted transition-colors text-foreground"
+                  >
+                    <div className="flex items-center gap-3">
+                      {service === "Resend Email" && (
+                        <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                        </svg>
+                      )}
+                      {service === "Telegram" && (
+                        <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                        </svg>
+                      )}
+                      {service === "Gemini" && (
+                        <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                        </svg>
+                      )}
+                      <span className="font-medium">{service}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>
       )}
+
+      {/* Credentials Modal */}
+      <CredentialsModal
+        isOpen={showCredModal}
+        onClose={() => {
+          setShowCredModal(false);
+          setSelectedCredType("");
+        }}
+        selectedTrigger={selectedCredType}
+        onSave={handleCreateCredential}
+      />
     </div>
   );
 }
