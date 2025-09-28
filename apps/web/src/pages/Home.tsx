@@ -1,12 +1,15 @@
-import { NavBar } from "../components/NavBar";
+import Hero from "../components/Hero";
+import Navigation from "../components/Navigation";
+import Features from "../components/Features";
+import Footer from "../components/Footer";
 
 export default function Home() {
     return (
-        <div>
-            <NavBar />
-            <div>
-                <h1>Home</h1>
-            </div>
-        </div>
+        <div className="min-h-screen bg-background">
+      <Navigation />
+      <Hero />
+      <Features />
+      <Footer />
+    </div>  
     )
 }
