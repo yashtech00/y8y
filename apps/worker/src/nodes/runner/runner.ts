@@ -1,4 +1,4 @@
-import { SendResendEmail } from "../../resend.js";
+import { SendResendEmail } from "../resend.js";
 import { runGeminiNode } from "../gemini/index.js";
 import { SendTelegramMessage } from "../Telegram.js";
 
