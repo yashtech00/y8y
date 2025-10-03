@@ -1,9 +1,8 @@
 {
-  "name": "worker",
+  "name": "ws-server",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-  "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc -b",
@@ -12,16 +11,12 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
+  "type": "module",
   "dependencies": {
-    "@langchain/anthropic": "^0.3.30",
-    "@langchain/google-genai": "^0.2.18",
-    "@langchain/langgraph": "^0.4.9",
-    "langchain": "^0.3.35",
-    "mustache": "^4.2.0",
     "nodemon": "^3.1.10",
-    "resend": "^6.1.2"
+    "ws": "^8.18.3"
   },
   "devDependencies": {
-    "@types/mustache": "^4.2.6"
+    "@types/ws": "^8.18.1"
   }
 }

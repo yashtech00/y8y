@@ -1,1 +1,1 @@
-{"root":["./src/index.ts","./src/nodes/telegram.ts","./src/nodes/resend.ts","./src/nodes/gemini/index.ts","./src/nodes/runner/runner.ts","./src/nodes/runner/tools/tool.ts","./src/utils/memory.ts"],"errors":true,"version":"5.9.2"}
+{"root":["./src/index.ts","./src/publish.ts","./src/nodes/telegram.ts","./src/nodes/resend.ts","./src/nodes/gemini/index.ts","./src/nodes/runner/runner.ts","./src/nodes/runner/tools/tool.ts","./src/utils/memory.ts"],"version":"5.9.2"}

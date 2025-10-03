@@ -3,7 +3,7 @@ import { AgentExecutor, createToolCallingAgent } from "langchain/agents";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { tools } from "../runner/tools/tool.js";
 import prisma from "@n8n/db";
-import { addMemory, getMemory } from "../../../utils/memory.js";
+import { addMemory, getMemory } from "../../utils/memory.js";
 
 function resolveTemplate(template: string, context: Record<string, any>): string {
   if (!template || typeof template !== 'string') {

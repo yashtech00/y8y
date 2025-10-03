@@ -2,6 +2,7 @@ import prisma from "@n8n/db";
 import { redis } from "@my-n8n/shared";
 import { runner } from "./nodes/runner/runner.js";
 import { publishEvent } from "./publish.js";
+import { task } from "@langchain/langgraph";
 
 type XReadMessage = {
     id: string;
@@ -53,7 +54,7 @@ async function processExecution(message: XReadMessage) {
             await publishEvent(workflowId!, { type: "execution_started", executionId, workflowId, totalTasks: execution?.totalTasks ?? 0 });
 
             const nodes = workflow.nodes as Record<string, any>;
-            const connections = workflow.connections as Record<string, string[]>;
+            const connections = workflow.connection as Record<string, string[]>;
 
             let context: Record<string, any> = {
                 $json: { body: triggerPayload },
@@ -62,7 +63,7 @@ async function processExecution(message: XReadMessage) {
             };
 
 
-            let tasksDone = 0;
+            let taskDone = 0;
 
             const indegree: Record<string, number> = {};
             Object.keys(nodes).forEach((n) => (indegree[n] = 0));
@@ -92,12 +93,12 @@ async function processExecution(message: XReadMessage) {
                     const result = await runner(node, context, workflowId);
                     context.$node[nodeId] = result;
 
-                    tasksDone++;
+                    taskDone++;
 
                     await prisma.execution.update({
                         where: { id: executionId },
                         data: {
-                            tasksDone,
+                            taskDone,
                             logs: { ...(execution!.logs as any), [nodeId]: "Success" },
                         },
                     });
@@ -156,13 +157,16 @@ async function processExecution(message: XReadMessage) {
                     executionId,
                     workflowId,
                     status: "FAILED",
-                    tasksDone
+                    taskDone
                 });
 
             } else {
                 await prisma.execution.update({
                     where: { id: executionId },
-                    data: { status: "SUCCESS", tasksDone },
+                    data: {
+                        status: "SUCCESS",
+                        taskDone
+                    },
                 });
 
                 await publishEvent(workflowId!, {
@@ -170,7 +174,7 @@ async function processExecution(message: XReadMessage) {
                     executionId,
                     workflowId,
                     status: "SUCCESS",
-                    tasksDone,
+                    taskDone,
                 });
             }
 
