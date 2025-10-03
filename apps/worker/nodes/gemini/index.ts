@@ -1,75 +1,138 @@
-// npm install @langchain-anthropic
-import { createReactAgent } from "@langchain/langgraph/prebuilt";
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
-import { tool } from "@langchain/core/tools";
+import { AgentExecutor, createToolCallingAgent } from "langchain/agents";
+import { ChatPromptTemplate } from "@langchain/core/prompts";
+import { tools } from "../runner/tools/tool.js";
+import prisma from "@n8n/db";
+import { addMemory, getMemory } from "../../utils/memory.js";
 
-import { z } from "zod";
-
-const sum = tool(
-  async (input) => {
-    console.log("sum tool called");
-    return input.a + input.b;
-  },
-  {
-    name: "sum",
-    description: "Call to sum two numbers.",
-    schema: z.object({
-      a: z.number().describe("The first number to add."),
-      b: z.number().describe("The second number to add."),
-    }),
+function resolveTemplate(template: string, context: Record<string, any>): string {
+  if (!template || typeof template !== 'string') {
+    return template;
   }
-);
+  
+  return template.replace(/\{\{\s*\$json\.body\.(\w+)\s*\}\}/g, (match, key) => {
+    return context.$json?.body?.[key] || match;
+  }).replace(/\{\{\s*\$node\.(\w+)\.(\w+)\s*\}\}/g, (match, nodeId, property) => {
+    return context.$node?.[nodeId]?.[property] || match;
+  });
+}
+
+export async function runGeminiNode(node: any, context: any, workflowId?: string) {
+  try {
+    let { prompt,memory } = node.config;
+    
+    if (prompt && typeof prompt === 'string' && prompt.includes('{{')) {
+      prompt = resolveTemplate(prompt, context);
+      // console.log("Original prompt:", node.config.prompt);
+      // console.log("Resolved prompt:", prompt);
+    }
+
+    // console.log("Final prompt to Gemini:", prompt)
+
+    const creds = await prisma.credentials.findUnique({
+      where: { id: node.credentialsId },
+    });
+
+    if (!creds) {
+      throw new Error("Gemini credentials not found");
+    }
+
+    const data = typeof creds.data === "string" ? JSON.parse(creds.data) : creds.data;
+    const { geminiApiKey } = data;
+
+    if (!geminiApiKey) {
+      throw new Error("Missing Gemini API Key");
+    }
+
+    const model = new ChatGoogleGenerativeAI({
+      apiKey: geminiApiKey,
+      model: "gemini-2.0-flash",
+      temperature: 0.5
+    });
+
+    let history: { role: "user" | "assistant"; content: string }[] = [];
+    if(memory && workflowId) {
+    history = await getMemory(workflowId);
+    }
 
 
-const multiply = tool(
-  async (input) => {
-    console.log("multiply tool called");
-    return input.a * input.b;
-  },
-  {
-    name: "multiply",
-    description: "Call to multiply two numbers.",
-    schema: z.object({
-      a: z.number().describe("The first number to multiply."),
-      b: z.number().describe("The second number to multiply."),
-    }),
+    const promptTemplate = ChatPromptTemplate.fromMessages([
+      [
+        "system", 
+        `You are a helpful AI assistant with access to various tools and functions.
+        
+        When responding to user requests:
+        - If the task can be accomplished using available tools, use them appropriately
+        - Always see if tools are needed or not before responsing , If no tools are needed, respond naturally with your knowledge
+        - Always provide clear, helpful responses
+        - Use tools when they can enhance your response or perform specific actions
+        -  When asked to return JSON, return only valid JSON without extra text or backticks.
+
+          You can generate content freely when tools aren't needed
+        Choose the best approach based on what the user is asking for.`
+      ],
+      ...history.map((h) => [h.role, h.content] as [string,string]),
+      ["user", "{input}"],
+      ["placeholder", "{agent_scratchpad}"],
+    ]);
+
+    const agent = await createToolCallingAgent({
+      llm: model,
+      tools,
+      prompt: promptTemplate
+    });
+
+    const executor = new AgentExecutor({
+      agent,
+      tools,
+      verbose: true, 
+      maxIterations: 10 
+    });
+
+    const result = await executor.invoke({
+      input: String(prompt)
+    });
+
+    if (!result) {
+      throw new Error("No Result")
+    }
+
+    // console.log("Result: ", result)
+
+   let rawText = result.output.trim();
+
+    
+   rawText = rawText.replace(/^```json\s*/i, "").replace(/```$/i, "").trim();
+
+
+   if(memory && workflowId) {
+    await addMemory(workflowId, "user", prompt);
+    await addMemory(workflowId, "assistant", rawText);
+   }
+
+
+      try {
+     const parsed = JSON.parse(rawText);
+        if (parsed && typeof parsed === "object") {
+        return {
+          text: parsed, 
+          query: String(prompt),
+          intermediateSteps: result.intermediateSteps,
+        };
+      }
+    } catch {
+      console.warn("Gemini output not valid JSON, returning as text");
+    }
+
+
+    return {
+      text: rawText,
+      query: String(prompt),  
+      intermediateSteps: result.intermediateSteps
+    }
+
+  } catch (error: any) {
+    console.error("Failed to run gemini node error: ", error.message);
+    throw error
   }
-);
-
-const exponent = tool(
-  async (input) => {
-    console.log("exponent tool called");
-    return input.a ** input.b;
-  },
-  {
-    name: "exponent",
-    description: "Finds power of a number to a given number.",
-    schema: z.object({
-      a: z.number().describe("The number to find the power of."),
-      b: z.number().describe("The power to raise the number to."),
-    }),
-  }
-);
-
-
-// Initialize the model with tools
-const model = new ChatGoogleGenerativeAI({
-    model: "gemini-2.0-flash",
-    temperature: 0,
-});
-
-const agent = createReactAgent({
-  llm: model,
-  tools: [sum, multiply, exponent],
-});
-
-const result = await agent.invoke({
-  messages: [
-    {
-      role: "user",
-      content: "First calculate 3 + 4, then multiply the result by 2, then raise it to the power of 2",
-    },
-  ],
-});
-
-console.log(result,"yash");
+}
