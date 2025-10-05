@@ -8,7 +8,7 @@ import {
   applyNodeChanges,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { createWorkflow, fetchCredentials } from "../../utils/Api";
+import { createWorkflow, fetchCredentials } from "../../utils/api";
 import CredentialsModal from "./CredentialModel";
 
 const initialNodes: any[] = [];
@@ -19,9 +19,9 @@ export default function WorkFlowEditor() {
   const [edges, setEdges] = useState(initialEdges);
   const [saving, setSaving] = useState(false);
   const [title, setTitle] = useState("");
-  const [openTriggerDrawer, setOpenTriggerDrawer] = useState(false);
+  const [openPlatform, setOpenPlatform] = useState(false);
   const [showCredModal, setShowCredModal] = useState(false);
-  const [selectedTrigger, setSelectedTrigger] = useState("");
+  const [selectedPlatform, setSelectedPlatform] = useState("");
   const [, setCredentials] = useState([]);
 
   const token = localStorage.getItem("token") || "";
@@ -52,41 +52,65 @@ export default function WorkFlowEditor() {
     []
   );
 
-  const addNode = (label?: string, credentialId?: string) => {
-    const id = `n${nodes.length + 1}`;
+  const getNextPosition = useCallback(() => {
+    const offset = 150;
+    const existingPositions = nodes.map(node => node.position);
+    const basePosition = { x: 250, y: 150 };
+
+    let newPosition = { ...basePosition };
+    while (existingPositions.some(pos => pos.x === newPosition.x && pos.y === newPosition.y)) {
+      newPosition.x += offset;
+      if (newPosition.x > 800) {
+        newPosition.x = basePosition.x;
+        newPosition.y += offset;
+      }
+    }
+    return newPosition;
+  }, [nodes]);
+
+
+
+  const addNode = useCallback(
+    (selectedPlatform: Platform) => {
+      const nodeNumber = nodes.length + 1;
+    const nodeId = `node${nodeNumber}`;
     setNodes((nds) => [
       ...nds,
       {
-        id,
-        position: { x: Math.random() * 400, y: Math.random() * 400 },
+        id: nodeId,
+        type: selectedPlatform,
+        position: getNextPosition(),
         data: { 
-          label: label || `Node ${nodes.length + 1}`,
-          credentialId: credentialId || null
+          id: nodeId,
+          label: `${selectedPlatform} ${nodeNumber}`,
+          credentialId: null,
+          config: {},
+          type: selectedPlatform,
         },
       },
     ]);
-  };
+  }, [nodes,setNodes]);
 
-  const handleTriggerSelect = (trigger: string) => {
+  const handlePlatformSelect = (platform: string) => {
     // Check if credentials are required for this trigger
-    const requiresCredentials = ['Resend Email', 'Telegram', 'Gemini'].includes(trigger);
+    const requiresCredentials = ['Resend Email', 'Telegram', 'Gemini'].includes(platform);
     
     if (requiresCredentials) {
-      setSelectedTrigger(trigger);
+      setSelectedPlatform(platform);
       setShowCredModal(true);
     } else {
-      addNode(trigger);
-      setOpenTriggerDrawer(false);
+      addNode(platform);
+      setOpenPlatform(false);
     }
   };
 
-  const handleCredentialSave = async (credentialData: any) => {
+  const handleCredentialSave = async () => {
     try {
       // Add the node with the credential
-      addNode(selectedTrigger, credentialData.id);
-      setOpenTriggerDrawer(false);
+      addNode(selectedPlatform);
+      setOpenPlatform(false);
       setShowCredModal(false);
-      setSelectedTrigger("");
+      setSelectedPlatform("");
       
       // Refresh credentials list
       const data = await fetchCredentials(token);
@@ -168,7 +192,7 @@ export default function WorkFlowEditor() {
         {nodes.length === 0 && (
           <div className="absolute inset-0 flex items-center justify-center">
             <button
-              onClick={() => setOpenTriggerDrawer(true)}
+              onClick={() => setOpenPlatform(true)}
               className="px-4 py-2 bg-card border border-border text-foreground rounded-lg hover:bg-card/80 transition-colors"
             >
               + Add first step...
@@ -180,7 +204,7 @@ export default function WorkFlowEditor() {
         {nodes.length > 0 && (
           <div className="absolute bottom-6 right-6">
             <button
-              onClick={() => setOpenTriggerDrawer(true)}
+              onClick={() => setOpenPlatform(true)}
               className="w-12 h-12 flex items-center justify-center rounded-full bg-primary text-primary-foreground text-2xl shadow-primary hover:bg-primary/90 transition-colors"
             >
               +
@@ -188,15 +212,15 @@ export default function WorkFlowEditor() {
           </div>
         )}
 
-        {/* Trigger Drawer */}
-        {openTriggerDrawer && (
+        {/* Platform Drawer */}
+        {openPlatform && (
           <div className="absolute top-0 right-0 w-64 h-full bg-card border-l border-border shadow-card z-50 p-4 animate-slide-in">
-            <h2 className="text-lg font-semibold mb-4 text-foreground">Choose Trigger</h2>
+            <h2 className="text-lg font-semibold mb-4 text-foreground">Choose Platform</h2>
             <ul className="space-y-2">
               {["Gmail", "Webhook", "Telegram", "Resend Email", "Gemini"].map((item) => (
                 <li key={item}>
                   <button
-                    onClick={() => handleTriggerSelect(item)}
+                    onClick={() => handlePlatformSelect(item)}
                     className="w-full text-left px-3 py-2 rounded hover:bg-muted transition-colors text-foreground"
                   >
                     {item}
@@ -205,7 +229,7 @@ export default function WorkFlowEditor() {
               ))}
             </ul>
             <button
-              onClick={() => setOpenTriggerDrawer(false)}
+              onClick={() => setOpenPlatform(false)}
               className="mt-4 text-sm text-muted-foreground hover:text-primary transition-colors"
             >
               Close
@@ -219,9 +243,9 @@ export default function WorkFlowEditor() {
         isOpen={showCredModal}
         onClose={() => {
           setShowCredModal(false);
-          setSelectedTrigger("");
+          setSelectedPlatform("");
         }}
-        selectedTrigger={selectedTrigger}
+        selectedTrigger={selectedPlatform}
         onSave={handleCredentialSave}
       />
 

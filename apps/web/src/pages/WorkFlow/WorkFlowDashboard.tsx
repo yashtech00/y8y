@@ -19,9 +19,14 @@ interface Workflow {
 
 interface Credential {
   id: string;
-  name: string;
-  type: string;
-  createdAt: string;
+  title: string;
+  platform: string;
+  data: {
+    chatId: string;
+    botToken: string;
+  };
+  userId: string;
+  createdAt?: string; // optional, in case API provides
 }
 
 export default function WorkFlowDashboard() {
@@ -62,7 +67,18 @@ export default function WorkFlowDashboard() {
     if (activeTab === "Credentials") {
       setCredLoading(true);
       fetchCredentials(token)
-        .then((data) => setCredentials(data.credentials || []))
+        .then((data) => {
+          // map API data to Credential interface
+          const creds = (data.credentials || []).map((c: any) => ({
+            id: c.id,
+            title: c.title,
+            platform: c.platform,
+            data: c.data,
+            userId: c.userId,
+            createdAt: c.createdAt || new Date().toISOString(),
+          }));
+          setCredentials(creds);
+        })
         .catch((err: any) => setCredError(err.message))
         .finally(() => setCredLoading(false));
     }
@@ -88,13 +104,16 @@ export default function WorkFlowDashboard() {
   const handleCreateCredential = async (credentialData: any) => {
     try {
       await createCredential(credentialData, token);
+      // update credentials list using API-like structure
       setCredentials((prev) => [
         ...prev,
-        { 
-          id: Date.now().toString(), 
-          name: credentialData.title, 
-          type: credentialData.platform, 
-          createdAt: new Date().toISOString() 
+        {
+          id: Date.now().toString(),
+          title: credentialData.title,
+          platform: credentialData.platform,
+          data: credentialData.data || {},
+          userId: "current-user-id", // replace with actual if available
+          createdAt: new Date().toISOString(),
         },
       ]);
       setShowCredModal(false);
@@ -171,9 +190,7 @@ export default function WorkFlowDashboard() {
                 <div>
                   <h2 className="font-semibold text-foreground">{workflow.title}</h2>
                   <p className="text-sm text-muted-foreground">
-                    Last updated{" "}
-                    {new Date(workflow.updatedAt).toLocaleDateString()} | Created{" "}
-                    {new Date(workflow.createdAt).toLocaleDateString()}
+                    Last updated {new Date(workflow.updatedAt).toLocaleDateString()} | Created {new Date(workflow.createdAt).toLocaleDateString()}
                   </p>
                   <span className="text-xs text-muted-foreground">
                     Status: {workflow.enabled ? "Active" : "Inactive"}
@@ -218,10 +235,10 @@ export default function WorkFlowDashboard() {
                 className="bg-card border border-border rounded-lg p-4 flex justify-between items-center mb-3 hover:bg-card/80 transition-colors"
               >
                 <div>
-                  <h2 className="font-semibold text-foreground">{cred.name}</h2>
+                  <h2 className="font-semibold text-foreground">{cred.title}</h2>
                   <p className="text-sm text-muted-foreground">
-                    Type: {cred.type} | Created{" "}
-                    {new Date(cred.createdAt).toLocaleDateString()}
+                    Platform: {cred.platform} | Chat ID: {cred.data.chatId} 
+                  
                   </p>
                 </div>
               </div>
@@ -277,21 +294,6 @@ export default function WorkFlowDashboard() {
                     className="w-full text-left px-3 py-2 rounded-md hover:bg-muted transition-colors text-foreground"
                   >
                     <div className="flex items-center gap-3">
-                      {service === "Resend Email" && (
-                        <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                        </svg>
-                      )}
-                      {service === "Telegram" && (
-                        <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                        </svg>
-                      )}
-                      {service === "Gemini" && (
-                        <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                        </svg>
-                      )}
                       <span className="font-medium">{service}</span>
                     </div>
                   </button>
