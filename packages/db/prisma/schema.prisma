@@ -31,7 +31,7 @@ model Workflow{
   title String
   enabled Boolean @default(true)
   nodes Json
-  connection Json
+  connections Json
 
   webhook Webhook? @relation(fields: [webhookId],references: [id])
   webhookId String? @unique
