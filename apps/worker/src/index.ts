@@ -1,5 +1,7 @@
 import { redis } from "@my-n8n/shared";
 import prisma from "@n8n/db";
+import { runner } from "./nodes/runner/runner.js";
+import { publishEvent } from "./publish.js";
 
 
 type XReadMessage = {
@@ -24,7 +26,7 @@ async function processExecution(message: XReadMessage) {
 
         const workflow = await prisma.workflow.findUnique({
             where: {
-                id: workflowId
+                id: workflowId!
             }
         })
 
@@ -36,7 +38,7 @@ async function processExecution(message: XReadMessage) {
 
         const execution = await prisma.execution.findUnique({
             where: {
-                id:executionId
+                id:executionId!
             }
         })
 
@@ -50,21 +52,120 @@ async function processExecution(message: XReadMessage) {
         
         await prisma.execution.update({
             where: {
-                id:executionId
+                id:executionId!
             },
             data: {
                 status: "RUNNING"
             }
         })
 
-        await publishEvent(workflowId, { type: "execution_started", executionId, workflowId, totalTasks: execution.totalTasks ?? 0 })
+        await publishEvent(workflowId!, { type: "execution_started", executionId, workflowId, totalTasks: execution.totalTasks ?? 0 })
         
         const nodes = workflow.nodes as Record<string, any>;
         const connections = workflow.connections as Record<string, any>;
 
+        let context: Record<string, any> = {
+            $json: { body: triggerPayload },
+            $node:{}
+        };
+
+        let tasksDone = 0;
+
         
+        const indegree: Record<string, number> = {};
+        Object.keys(nodes).forEach((n) => (indegree[n] = 0));
+        Object.values(connections).forEach((targets) => {
+            targets.forEach(
+                (t:string) => (indegree[t] = (indegree[t] || 0) + 1)
+            );
+        });
         
-    } catch (e) {
+
+        const queue: string[] = Object.keys(indegree).filter((n) => indegree[n] === 0);
+        let executionFailed = false;
+        while(queue.length > 0){
+            const nodeId = queue.shift()!;
+            const node = nodes[nodeId];
+
+            await publishEvent(workflowId!, { type: "node_started", executionId, workflowId, nodeId })
+
+            try {
+                const result = await runner(node, context, executionId);
+                
+                context.$node[nodeId] = result;
+
+                tasksDone++;
+
+                await prisma.execution.update({
+                    where: {
+                        id: executionId!
+                    },
+                    data: {
+                        taskDone: tasksDone,
+                        logs:{...(execution!.logs as any),[nodeId]:"Sussess"},
+                    },
+                })
+
+                await publishEvent(workflowId!, { type: "node_succeeded", executionId, workflowId, nodeId })
+
+                const nextNodes = connections[nodeId] || [];
+                nextNodes.forEach((n:string) => {
+                    if (indegree[n] !== undefined) {
+                        indegree[n]--;
+                        if (indegree[n] === 0) {
+                            queue.push(n);
+                        }
+                    }
+                });
+                
+                
+            } catch (e:any) {
+                console.error("Error processing node:", e.message);
+
+                const msg = e.message;
+
+                await prisma.execution.update({
+                    where: {
+                        id: executionId!
+                    },
+                    data: {
+                        logs:{...(execution!.logs as any),[nodeId]:`Error: ${msg}`},
+                    },
+                })
+                await publishEvent(workflowId!, { type: "node_failed", executionId, workflowId, nodeId, message: msg })
+                executionFailed = true;
+                break;
+            }
+            
+        }
+
+        if(executionFailed){
+            await prisma.execution.update({
+                where: {
+                    id: executionId!
+                },
+                data: {
+                    status: "FAILED",
+                },
+            })
+            await publishEvent(workflowId!  , { type: "execution_failed", executionId, workflowId })
+        }else{
+            await prisma.execution.update({
+                where: {
+                    id: executionId!
+                },
+                data: {
+                    status: "SUCCESS",
+                },
+            })
+            await publishEvent(workflowId!, { type: "execution_succeeded", executionId, workflowId })
+        }
+
+        await redis.xAck("workflow:executions", GROUP, message.id);
+
+        
+    } catch (e:any) {
+        console.error("Error processing execution:", e.message);
         
     }
 }
@@ -88,7 +189,7 @@ async function main() {
                 { COUNT: 10, BLOCK: 1000 })
             if(jobs && Array.isArray(jobs)){
             for(const job of jobs){
-                await Promise.all(jobs.map((m) => {
+                await Promise.all(jobs.map((m:any) => {
                     processExecution(m)
                 }))
             }      
