@@ -1,15 +1,15 @@
-import type { Node, Edge, NodeChange, EdgeChange, Connection } from '@xyflow/react';
-import { Background, Controls, ReactFlow, addEdge, applyEdgeChanges, applyNodeChanges } from '@xyflow/react';
+import type { Node, Edge } from '@xyflow/react';
+import { Background, Controls, MiniMap, ReactFlow } from '@xyflow/react';
 import { Plus } from 'lucide-react';
 import { PlatformDrawer } from './PlatformDrawer';
-import type { Platform } from '../../types/workflow';
+import type { Platform } from '../../types/platform';
 
 interface FlowCanvasProps {
   nodes: Node[];
   edges: Edge[];
-  onNodesChange: (changes: NodeChange[]) => void;
-  onEdgesChange: (changes: EdgeChange[]) => void;
-  onConnect: (connection: Connection) => void;
+  onNodesChange: (changes: any) => void;
+  onEdgesChange: (changes: any) => void;
+  onConnect: (connection: any) => void;
   onAddFirstStep: () => void;
   isPlatformDrawerOpen: boolean;
   onOpenPlatformDrawer: () => void;
@@ -18,11 +18,13 @@ interface FlowCanvasProps {
   onSearchChange: (value: string) => void;
   platforms: Platform[];
   onPlatformSelect: (platform: string) => void;
+  triggerType: string;
+  setTriggerType: (triggerType: string) => void;
 }
 
 export const FlowCanvas = ({
-  nodes,
-  edges,
+  nodes = [],
+  edges = [],
   onNodesChange,
   onEdgesChange,
   onConnect,
@@ -32,11 +34,14 @@ export const FlowCanvas = ({
   onClosePlatformDrawer,
   searchQuery,
   onSearchChange,
-  platforms,
+  platforms = [],
   onPlatformSelect,
+  triggerType,
+  setTriggerType,
+
 }: FlowCanvasProps) => {
   return (
-    <div className="relative flex-1">
+    <div className="relative flex-1 bg-background text-black">
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -44,9 +49,13 @@ export const FlowCanvas = ({
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         fitView
+        nodesDraggable={true}
+        nodesConnectable={true}
+        elementsSelectable={true}
       >
         <Background />
-        <Controls />
+        <MiniMap style={{ backgroundColor: 'black', color: 'black', border: '1px solid black', borderRadius: '5px' }} />
+        <Controls style={{ backgroundColor: 'black', color: 'black', border: '1px solid black', borderRadius: '5px' }} />  
       </ReactFlow>
 
       {/* Show Add First Step */}
@@ -56,10 +65,10 @@ export const FlowCanvas = ({
             onClick={onAddFirstStep}
             className="flex flex-col items-center gap-4 group"
           >
-            <div className="w-32 h-32 bg-white border-2 border-dashed border-gray-300 rounded-2xl flex items-center justify-center text-gray-400 hover:border-blue-500 hover:text-blue-500 hover:bg-blue-50 transition-all group-hover:scale-105">
+            <div className="w-32 h-32 bg-background border-2 border-dashed border-gray-300 rounded-2xl flex items-center justify-center text-gray-400 hover:border-primary hover:text-primary hover:bg-primary/10 transition-all group-hover:scale-105">
               <span className="text-6xl font-light">+</span>
             </div>
-            <span className="text-gray-600 font-medium group-hover:text-blue-600 transition-colors">
+            <span className="text-gray-600 font-medium group-hover:text-primary transition-colors">
               Add first step
             </span>
           </button>
@@ -71,7 +80,7 @@ export const FlowCanvas = ({
         <div className="absolute bottom-8 right-8">
           <button
             onClick={onOpenPlatformDrawer}
-            className="w-14 h-14 flex items-center justify-center rounded-full bg-blue-600 text-white text-3xl shadow-lg hover:bg-blue-700 hover:shadow-xl transition-all hover:scale-110"
+            className="w-14 h-14 flex items-center justify-center rounded-full bg-background border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-400 hover:border-primary hover:text-primary hover:bg-primary/10 transition-all group-hover:scale-105"
           >
             <Plus className="w-6 h-6" />
           </button>
@@ -85,6 +94,8 @@ export const FlowCanvas = ({
         onSearchChange={onSearchChange}
         platforms={platforms}
         onPlatformSelect={onPlatformSelect}
+        triggerType={triggerType}
+        setTriggerType={setTriggerType}
       />
     </div>
   );

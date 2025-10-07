@@ -1,15 +1,21 @@
-import { useCallback, useEffect } from 'react';
-import { type Connection, type NodeChange, type EdgeChange, addEdge, applyEdgeChanges, applyNodeChanges } from '@xyflow/react';
+import { useCallback, useEffect, useState } from 'react';
+import { type Connection, type Edge } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
-
-import { createWorkflow, fetchCredentials } from '../../utils/api';
+import { fetchCredentials } from '../../utils/api';
 import { useWorkflow } from '../../hooks/useWorkflow';
+import { useWorkflowEditor } from '../../hooks/useWorkflowEditor';
 import { Header } from '../../components/Workflow/Header';
 import { TitleInput } from '../../components/Workflow/TitleInput';
 import { FlowCanvas } from '../../components/Workflow/FlowCanvas';
-import { Platform } from '../../types/workflow';
 import CredentialsModal from './CredentialModel';
+
+interface Platform {
+    name: string;
+    description: string;
+    icon: string;
+    requiresAuth: boolean;
+}
 
 const platforms: Platform[] = [
   { name: 'Gmail', description: 'Send and receive emails', icon: '📧', requiresAuth: false },
@@ -22,8 +28,6 @@ const platforms: Platform[] = [
 export default function WorkFlowEditor() {
   const { state, actions } = useWorkflow();
   const {
-    nodes,
-    edges,
     title,
     isSaving,
     isPlatformDrawerOpen,
@@ -33,41 +37,31 @@ export default function WorkFlowEditor() {
     credentials,
   } = state;
 
-  const token = localStorage.getItem('token') || '';
+  // Use the workflow editor hook for flow management
+  const {
+    nodes,
+    edges,
+    onNodesChange,
+    onEdgesChange,
+    onConnect,
+    saveWorkflow: saveWorkflowFromHook,
+  } = useWorkflowEditor();
+
+  const [triggerType,setTriggerType] = useState<'Manual' | 'Webhook'>('Manual');
+
 
   // Load credentials on component mount
   useEffect(() => {
     const loadCredentials = async () => {
       try {
-        const data = await fetchCredentials(token);
+        const data = await fetchCredentials();
         actions.setCredentials(data.credentials || []);
       } catch (err) {
         console.error('Failed to load credentials:', err);
       }
     };
     loadCredentials();
-  }, [token]);
-
-  const onNodesChange = useCallback(
-    (changes: NodeChange[]) => {
-      actions.setNodes(applyNodeChanges(changes, nodes));
-    },
-    [nodes]
-  );
-
-  const onEdgesChange = useCallback(
-    (changes: EdgeChange[]) => {
-      actions.setEdges(applyEdgeChanges(changes, edges));
-    },
-    [edges]
-  );
-
-  const onConnect = useCallback(
-    (params: Connection) => {
-      actions.setEdges(addEdge(params, edges));
-    },
-    [edges]
-  );
+  }, [ actions]);
 
   const getNextPosition = useCallback(() => {
     const offset = 150;
@@ -95,15 +89,41 @@ export default function WorkFlowEditor() {
         position: getNextPosition(),
         data: {
           id: nodeId,
-          label: 'New Node',
+          label: platform,
           credentialId: null,
           config: {},
           type: platform,
         },
       };
-      actions.setNodes([...nodes, newNode]);
+      
+      // Add the new node
+      onNodesChange([
+        {
+          type: 'add',
+          item: newNode,
+        },
+      ]);
+      
+      // If there's a previous node, create an edge connecting them
+      if (nodes.length > 0) {
+        const lastNode = nodes[nodes.length - 1];
+        const newEdge: Edge = {
+          id: `edge-${lastNode.id}-${nodeId}`,
+          source: lastNode.id,
+          target: nodeId,
+          type: 'smoothstep',
+        };
+        
+        // Add the new edge
+        onEdgesChange([
+          {
+            type: 'add',
+            item: newEdge,
+          },
+        ]);
+      }
     },
-    [nodes, getNextPosition]
+    [nodes, getNextPosition, onNodesChange, onEdgesChange]
   );
 
   const handlePlatformSelect = (platform: string) => {
@@ -128,7 +148,7 @@ export default function WorkFlowEditor() {
       actions.setSelectedPlatform('');
       actions.setSearchQuery('');
 
-      const data = await fetchCredentials(token);
+      const data = await fetchCredentials();
       actions.setCredentials(data.credentials || []);
     } catch (err) {
       console.error('Failed to save credential:', err);
@@ -138,18 +158,11 @@ export default function WorkFlowEditor() {
   const saveWorkflow = async () => {
     actions.setSaving(true);
     try {
-      const data = await createWorkflow(
-        {
-          title: title || 'My workflow',
-          nodes,
-          connections: edges,
-          triggerType: 'Manual',
-          enabled: true,
-        },
-        token
+      await saveWorkflowFromHook(
+        title || 'My Workflow',
+        triggerType || 'Manual',
       );
       alert('✅ Workflow saved successfully!');
-      console.log('Saved workflow:', data);
     } catch (err: any) {
       alert('❌ Error saving workflow: ' + err.message);
     } finally {
@@ -170,7 +183,8 @@ export default function WorkFlowEditor() {
       <TitleInput
         title={title}
         onTitleChange={actions.setTitle}
-        onSave={saveWorkflow} isSaving={isSaving}
+        onSave={saveWorkflow} 
+        isSaving={isSaving}
       />
 
       <FlowCanvas
@@ -190,6 +204,8 @@ export default function WorkFlowEditor() {
         onSearchChange={actions.setSearchQuery}
         platforms={filteredPlatforms}
         onPlatformSelect={handlePlatformSelect}
+        triggerType={triggerType}
+        setTriggerType={setTriggerType}
       />
 
       <CredentialsModal

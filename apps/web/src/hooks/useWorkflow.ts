@@ -1,10 +1,25 @@
 import { useReducer, useCallback } from 'react';
-import type { Node, Edge } from '@xyflow/react';
-import type { WorkflowState, WorkflowAction } from '../types/workflow';
+
+interface WorkflowState {
+  title: string;
+  isSaving: boolean;
+  isPlatformDrawerOpen: boolean;
+  showCredModal: boolean;
+  selectedPlatform: string;
+  searchQuery: string;
+  credentials: any[];
+}
+
+type WorkflowAction =
+  | { type: 'SET_TITLE'; payload: string }
+  | { type: 'SET_SAVING'; payload: boolean }
+  | { type: 'SET_PLATFORM_DRAWER_OPEN'; payload: boolean }
+  | { type: 'SET_SHOW_CRED_MODAL'; payload: boolean }
+  | { type: 'SET_SELECTED_PLATFORM'; payload: string }
+  | { type: 'SET_SEARCH_QUERY'; payload: string }
+  | { type: 'SET_CREDENTIALS'; payload: any[] };
 
 const initialState: WorkflowState = {
-  nodes: [],
-  edges: [],
   title: '',
   isSaving: false,
   isPlatformDrawerOpen: false,
@@ -16,10 +31,6 @@ const initialState: WorkflowState = {
 
 function workflowReducer(state: WorkflowState, action: WorkflowAction): WorkflowState {
   switch (action.type) {
-    case 'SET_NODES':
-      return { ...state, nodes: action.payload };
-    case 'SET_EDGES':
-      return { ...state, edges: action.payload };
     case 'SET_TITLE':
       return { ...state, title: action.payload };
     case 'SET_SAVING':
@@ -41,14 +52,6 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
 
 export const useWorkflow = () => {
   const [state, dispatch] = useReducer(workflowReducer, initialState);
-
-  const setNodes = useCallback((nodes: Node[]) => {
-    dispatch({ type: 'SET_NODES', payload: nodes });
-  }, []);
-
-  const setEdges = useCallback((edges: Edge[]) => {
-    dispatch({ type: 'SET_EDGES', payload: edges });
-  }, []);
 
   const setTitle = useCallback((title: string) => {
     dispatch({ type: 'SET_TITLE', payload: title });
@@ -81,8 +84,6 @@ export const useWorkflow = () => {
   return {
     state,
     actions: {
-      setNodes,
-      setEdges,
       setTitle,
       setSaving,
       setPlatformDrawerOpen,

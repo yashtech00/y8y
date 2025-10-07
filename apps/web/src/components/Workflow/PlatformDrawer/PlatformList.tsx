@@ -1,5 +1,5 @@
 import { Search } from 'lucide-react';
-import type { Platform } from '../../../types/workflow';
+import type { Platform } from '../../../types/platform';
 
 interface PlatformListProps {
   platforms: Platform[];
@@ -25,13 +25,13 @@ export const PlatformList = ({ platforms, onPlatformSelect }: PlatformListProps)
         <button
           key={platform.name}
           onClick={() => onPlatformSelect(platform.name)}
-          className="w-full text-left p-4 rounded-xl border border-gray-200 hover:border-blue-500 hover:bg-blue-50 transition-all group"
+          className="w-full text-left p-4 rounded-xl border border-gray-200 hover:border-foreground hover:bg-blue-50 transition-all group"
         >
           <div className="flex items-start gap-3">
             <div className="text-3xl">{platform.icon}</div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
-                <h3 className="font-medium text-gray-900 group-hover:text-blue-600 transition-colors">
+                <h3 className="font-medium text-white group-hover:text-foreground transition-colors">
                   {platform.name}
                 </h3>
                 {platform.requiresAuth && (

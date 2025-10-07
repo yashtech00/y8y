@@ -55,7 +55,7 @@ export default function WorkFlowDashboard() {
   useEffect(() => {
     const loadWorkflows = async () => {
       try {
-        const data = await fetchWorkflows(token);
+        const data = await fetchWorkflows();
         setWorkflows(data.workflows || []);
       } catch (err: any) {
         setWfError(err.message);
@@ -70,7 +70,7 @@ export default function WorkFlowDashboard() {
   useEffect(() => {
     if (activeTab === "Credentials") {
       setCredLoading(true);
-      fetchCredentials(token)
+      fetchCredentials()
         .then((data) => {
           // map API data to Credential interface
           const creds = (data.credentials || []).map((c: any) => ({
@@ -93,7 +93,7 @@ export default function WorkFlowDashboard() {
       await updateWorkflow(
         workflow.id,
         { enabled: !workflow.enabled },
-        token
+        
       );
       setWorkflows((prev) =>
         prev.map((w) =>
@@ -109,7 +109,7 @@ export default function WorkFlowDashboard() {
     try {
       if (editingCredential) {
         // Update existing credential
-        await updateCredential(editingCredential.id, credentialData, token);
+        await updateCredential(editingCredential.id, credentialData);
         setCredentials(prev => 
           prev.map(cred => 
             cred.id === editingCredential.id 
@@ -119,7 +119,7 @@ export default function WorkFlowDashboard() {
         );
       } else {
         // Create new credential
-        const newCredential = await createCredential(credentialData, token);
+        const newCredential = await createCredential(credentialData);
         setCredentials(prev => [
           ...prev,
           {
@@ -157,7 +157,7 @@ export default function WorkFlowDashboard() {
     }
     
     try {
-      await deleteCredential(credentialId, token);
+      await deleteCredential(credentialId);
       // Update the credentials list by removing the deleted credential
       setCredentials(prev => prev.filter(cred => cred.id !== credentialId));
     } catch (err: any) {

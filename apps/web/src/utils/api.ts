@@ -1,7 +1,9 @@
-const API_BASE = "http://localhost:8080/api/v1"; // 
+const API_BASE = "http://localhost:8080/api/v1"; //
+
+const token = localStorage.getItem('token') || '';
 
 // ---------------- Workflows ----------------
-export const fetchWorkflows = async (token: string) => {
+export const fetchWorkflows = async () => {
   const res = await fetch(`${API_BASE}/workflow/getAll`, {
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -9,7 +11,7 @@ export const fetchWorkflows = async (token: string) => {
   return res.json();
 };
 
-export const fetchWorkflowById = async (id: string, token: string) => {
+export const fetchWorkflowById = async (id: string) => {
   const res = await fetch(`${API_BASE}/workflow/get/${id}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -19,7 +21,6 @@ export const fetchWorkflowById = async (id: string, token: string) => {
 
 export const createWorkflow = async (
   body: any,
-  token: string
 ): Promise<any> => {
   const res = await fetch(`${API_BASE}/workflow/create`, {
     method: "POST",
@@ -36,7 +37,6 @@ export const createWorkflow = async (
 export const updateWorkflow = async (
   id: string,
   body: any,
-  token: string
 ): Promise<any> => {
   const res = await fetch(`${API_BASE}/workflow/update/${id}`, {
     method: "PUT",
@@ -51,7 +51,7 @@ export const updateWorkflow = async (
 };
 
 // ---------------- Credentials ----------------
-export const fetchCredentials = async (token: string) => {
+export const fetchCredentials = async () => {
   const res = await fetch(`${API_BASE}/credentials/getAll`, {
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -59,7 +59,7 @@ export const fetchCredentials = async (token: string) => {
   return res.json();
 };
 
-export const createCredential = async (body: any, token: string) => {
+export const createCredential = async (body: any) => {
   const res = await fetch(`${API_BASE}/credentials/create`, {
     method: "POST",
     headers: {
@@ -75,7 +75,6 @@ export const createCredential = async (body: any, token: string) => {
 export const updateCredential = async (
   id: string,
   body: any,
-  token: string
 ) => {
   const res = await fetch(`${API_BASE}/credentials/update/${id}`, {
     method: "PUT",
@@ -89,7 +88,7 @@ export const updateCredential = async (
   return res.json();
 };
 
-export const deleteCredential = async (id: string, token: string) => {
+export const deleteCredential = async (id: string) => {
   const res = await fetch(`${API_BASE}/credentials/delete/${id}`, {
     method: "DELETE",
     headers: { Authorization: `Bearer ${token}` },
