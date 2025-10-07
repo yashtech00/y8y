@@ -1,14 +1,29 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Mail, MessageCircle, Sparkles } from 'lucide-react';
+
+interface Credential {
+  id: string;
+  title: string;
+  platform: string;
+  data: {
+    chatId?: string;
+    botToken?: string;
+    api_key?: string;
+    resendDomainMail?: string;
+  };
+  userId: string;
+  createdAt?: string;
+}
 
 interface CredentialsModalProps {
   isOpen: boolean;
   onClose: () => void;
   selectedTrigger: string;
   onSave: (credentialData: any) => Promise<void>;
+  credentialToEdit?: Credential | null;
 }
 
-const CredentialsModal = ({ isOpen, onClose, selectedTrigger, onSave }: CredentialsModalProps) => {
+const CredentialsModal = ({ isOpen, onClose, selectedTrigger, onSave, credentialToEdit }: CredentialsModalProps) => {
   const [formData, setFormData] = useState({
     title: '',
     api_key: '',
@@ -18,6 +33,29 @@ const CredentialsModal = ({ isOpen, onClose, selectedTrigger, onSave }: Credenti
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
+
+  // Pre-fill form when editing
+  useEffect(() => {
+    if (credentialToEdit && isOpen) {
+      setFormData({
+        title: credentialToEdit.title || '',
+        api_key: credentialToEdit.data?.api_key || '',
+        resendDomainMail: credentialToEdit.data?.resendDomainMail || '',
+        botToken: credentialToEdit.data?.botToken || '',
+        chatId: credentialToEdit.data?.chatId || ''
+      });
+    } else if (!isOpen) {
+      // Reset form when modal closes
+      setFormData({
+        title: '',
+        api_key: '',
+        resendDomainMail: '',
+        botToken: '',
+        chatId: ''
+      });
+      setErrors({});
+    }
+  }, [credentialToEdit, isOpen]);
 
   if (!isOpen) return null;
 
@@ -157,7 +195,7 @@ const CredentialsModal = ({ isOpen, onClose, selectedTrigger, onSave }: Credenti
           <div className="flex items-center gap-3">
             {currentConfig.icon}
             <h2 className="text-xl font-semibold text-foreground">
-              Setup {selectedTrigger}
+              {credentialToEdit ? 'Edit' : 'Setup'} {selectedTrigger}
             </h2>
           </div>
           <button
@@ -230,7 +268,7 @@ const CredentialsModal = ({ isOpen, onClose, selectedTrigger, onSave }: Credenti
                 : 'bg-primary hover:bg-primary/90 shadow-primary'
             }`}
           >
-            {loading ? 'Saving...' : 'Save Credentials'}
+            {loading ? (credentialToEdit ? 'Updating...' : 'Saving...') : (credentialToEdit ? 'Update Credentials' : 'Save Credentials')}
           </button>
         </div>
       </div>

@@ -4,9 +4,12 @@ import {
   updateWorkflow,
   fetchCredentials,
   createCredential,
+  updateCredential,
+  deleteCredential,
 } from "../../utils/api";
 import { Link } from "react-router-dom";
 import CredentialsModal from "./CredentialModel";
+import { Delete, Pencil, Trash } from "lucide-react";
 
 interface Workflow {
   id: string;
@@ -44,6 +47,7 @@ export default function WorkFlowDashboard() {
   const [showCredTypeModal, setShowCredTypeModal] = useState(false);
   const [showCredModal, setShowCredModal] = useState(false);
   const [selectedCredType, setSelectedCredType] = useState("");
+  const [editingCredential, setEditingCredential] = useState<Credential | null>(null);
 
   const token = localStorage.getItem("token") || "";
 
@@ -103,23 +107,37 @@ export default function WorkFlowDashboard() {
 
   const handleCreateCredential = async (credentialData: any) => {
     try {
-      await createCredential(credentialData, token);
-      // update credentials list using API-like structure
-      setCredentials((prev) => [
-        ...prev,
-        {
-          id: Date.now().toString(),
-          title: credentialData.title,
-          platform: credentialData.platform,
-          data: credentialData.data || {},
-          userId: "current-user-id", // replace with actual if available
-          createdAt: new Date().toISOString(),
-        },
-      ]);
+      if (editingCredential) {
+        // Update existing credential
+        await updateCredential(editingCredential.id, credentialData, token);
+        setCredentials(prev => 
+          prev.map(cred => 
+            cred.id === editingCredential.id 
+              ? { ...cred, ...credentialData, data: { ...cred.data, ...credentialData.data } }
+              : cred
+          )
+        );
+      } else {
+        // Create new credential
+        const newCredential = await createCredential(credentialData, token);
+        setCredentials(prev => [
+          ...prev,
+          {
+            id: newCredential.id || Date.now().toString(),
+            title: credentialData.title,
+            platform: credentialData.platform,
+            data: credentialData.data || {},
+            userId: "current-user-id",
+            createdAt: new Date().toISOString(),
+          },
+        ]);
+      }
+      
       setShowCredModal(false);
       setSelectedCredType("");
+      setEditingCredential(null);
     } catch (err: any) {
-      alert("❌ Failed to create credential: " + err.message);
+      alert(`❌ Failed to ${editingCredential ? 'update' : 'create'} credential: ` + err.message);
     }
   };
 
@@ -131,6 +149,21 @@ export default function WorkFlowDashboard() {
     setSelectedCredType(credType);
     setShowCredTypeModal(false);
     setShowCredModal(true);
+  };
+
+  const handleDelete = async (credentialId: string) => {
+    if (!window.confirm('Are you sure you want to delete this credential?')) {
+      return;
+    }
+    
+    try {
+      await deleteCredential(credentialId, token);
+      // Update the credentials list by removing the deleted credential
+      setCredentials(prev => prev.filter(cred => cred.id !== credentialId));
+    } catch (err: any) {
+      console.error('Failed to delete credential:', err);
+      alert('Failed to delete credential: ' + (err.message || 'Unknown error'));
+    }
   };
 
   return (
@@ -234,12 +267,31 @@ export default function WorkFlowDashboard() {
                 key={cred.id}
                 className="bg-card border border-border rounded-lg p-4 flex justify-between items-center mb-3 hover:bg-card/80 transition-colors"
               >
-                <div>
-                  <h2 className="font-semibold text-foreground">{cred.title}</h2>
-                  <p className="text-sm text-muted-foreground">
-                    Platform: {cred.platform} | Chat ID: {cred.data.chatId} 
-                  
-                  </p>
+                <div className="flex justify-between border-b border-border/50 p-2 w-full">
+                  <div>
+                    <h2 className="font-semibold text-foreground">{cred.title}</h2>
+                    <p className="text-sm text-muted-foreground">
+                      Platform: {cred.platform}  
+                    </p>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <button 
+                      className="cursor-pointer hover:text-primary transition-colors" 
+                      onClick={() => {
+                        setEditingCredential(cred);
+                        setSelectedCredType(cred.platform === 'ResendEmail' ? 'Resend Email' : cred.platform);
+                        setShowCredModal(true);
+                      }}
+                    >
+                      <Pencil />
+                    </button>
+                    <button 
+                      className="cursor-pointer hover:text-destructive transition-colors" 
+                      onClick={() => handleDelete(cred.id)}
+                    >
+                      <Trash />
+                    </button>
+                  </div>
                 </div>
               </div>
             ))
@@ -310,9 +362,11 @@ export default function WorkFlowDashboard() {
         onClose={() => {
           setShowCredModal(false);
           setSelectedCredType("");
+          setEditingCredential(null);
         }}
         selectedTrigger={selectedCredType}
         onSave={handleCreateCredential}
+        credentialToEdit={editingCredential}
       />
     </div>
   );

@@ -1,4 +1,4 @@
-const API_BASE = "http://localhost:8080/api/v1"; // 👈 change when deploying
+const API_BASE = "http://localhost:8080/api/v1"; // 
 
 // ---------------- Workflows ----------------
 export const fetchWorkflows = async (token: string) => {
